@@ -3,14 +3,30 @@ version: 0.2
 phases:
   pre_build:
     commands:
+      - echo "Checking versions"
       - aws --version
       - docker --version
-      - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com
+
+      - echo "Logging in to Amazon ECR (us-east-1)"
+      - aws ecr get-login-password --region us-east-1 \
+        | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com
+
   build:
     commands:
+      - echo "Building application"
       - mvn clean package -DskipTests
+
+      - echo "Building Docker image"
       - docker build -t service-one .
-      - docker tag service-one:latest <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/service-one:latest
+
+      - echo "Tagging image"
+      - docker tag service-one:latest <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/service-one:latest
+
   post_build:
     commands:
-      - docker push <ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/service-one:latest
+      - echo "Pushing image to ECR"
+      - docker push <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/service-one:latest
+
+      # OPTIONAL – only if you deploy from CodeBuild
+      # - aws eks update-kubeconfig --region us-east-1 --name demo-eks
+      # - kubectl apply -f k8s/
